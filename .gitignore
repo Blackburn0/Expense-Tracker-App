@@ -1,3 +1,7 @@
+node_modules
+uploads
+expense/migrations
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

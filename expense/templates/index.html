@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<br> <br> <br> <br>
+<div class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
+    <div class="w-full md:mt-0 sm:max-w-md xl:p-0 ">
+        <h1 class="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">Welcome</h1>
+
+        {% if user.is_authenticated %} 
+            <a class="text-xl leading-tight tracking-tight dark:text-white" href="{% url 'dashboard' %}">Dashboard</a>
+        {% else %}
+            <a class="text-xl leading-tight tracking-tight dark:text-white" href="{% url 'login' %}">Login</a>
+            <br>
+            <a class="text-xl leading-tight tracking-tight dark:text-white" href="{% url 'register' %}">Register</a>
+        {% endif %}
+        
+    </div>
+</div>
+{% endblock content %}
