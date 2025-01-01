@@ -271,6 +271,9 @@ def handle_uploaded_file(f):
         raise ValueError('Invalid file format')
 
 def upload_file(request):
+    """
+    Uploads a file
+    """
     if request.method == 'POST' and request.FILES.get('file'):
         try:
             # Process the uploaded file
