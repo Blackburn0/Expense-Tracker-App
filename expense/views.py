@@ -6,11 +6,10 @@ from django.contrib.auth.models import User
 from .models import *
 from django.http import HttpResponse
 
-import pandas as pd
 from .forms import UploadFileForm
-from datetime import datetime
 import csv
 from openpyxl import load_workbook
+from django.core.paginator import Paginator
 
 # Create your views here.
 def index(request):
@@ -53,7 +52,6 @@ def register_user(request):
             )
             user.save()
             messages.success(request, "You have successfully registered! Kindly login below!")
-            logger.info("Registration successful")
             return redirect('login')
         except Exception as e:
             messages.error(request, f"An error occurred: {str(e)}")
@@ -96,13 +94,22 @@ def dashboard(request):
     return render(request, 'dashboard.html')
 
 @login_required(login_url='login/')
-def get_all_book(request):
+def get_users_book(request):
     """
     Returns all the book categories
     """
-    books = Book.objects.all()
+    user = request.user
+    # books = Book.objects.all()
+    books = Book.objects.filter(user=user)
+
+    paginator = Paginator(books, 10)  # Show 10 books per page
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'book-list.html', {'books': books, 'page_obj': page_obj})
+
+
     # Add pagination
-    return render(request, 'book-list.html', {'books': books})
+    # return render(request, 'book-list.html', {'books': books})
 
 @login_required(login_url='login/')
 def book_details(request, pk):
@@ -194,44 +201,14 @@ def delete_book(request, pk):
     except Exception as e:
         return HttpResponse(f"Error: {e}")
 
-# @login_required(login_url='login/')
-# def upload_file(request):
-#     """
-#     Uploads a file to the system
-#     """
-#     if request.method == 'POST':
-#         form = UploadFileForm(request.POST, request.FILES)
-#         if form.is_valid():
-#             file = request.FILES['file']
-#             df = pd.read_excel(file)
-#             for _, row in df.iterrows():
-#                 book, created = Book.objects.get_or_create(
-#                     title=row['Title'],
-#                     author=row['Author'],
-#                     publication_date=datetime.strptime(row['Publication Date'], '%Y-%m-%d')
-#                 )
-#                 if created:
-#                     messages.success(request, f'Successfully imported {book.title}')
-#                 else:
-#                     messages.warning(request, f'{book.title} already exists')
-#             return redirect('upload_file')
-#     else:
-#         form = UploadFileForm()
-#     return render(request, 'upload.html', {'form': form})
-
-
-
-
-
-
-def handle_uploaded_file(f):
+def handle_uploaded_file(f, user):
     # Handle file processing based on the file type
     if f.name.endswith('.csv'):
         # Read CSV file
         file_content = f.read().decode('utf-8').splitlines()
         reader = csv.DictReader(file_content)
+        
         for row in reader:
-            # Replace 'field1', 'field2' with your actual model fields
             Book.objects.create(
                 uid=row['id'],
                 title=row['title'],
@@ -241,20 +218,13 @@ def handle_uploaded_file(f):
                 published_date=row['published_date'],
                 category=row['category'],
                 distribution_expense=row['distribution_expense'],
-
-                # Add other fields as needed
+                user=user,  # Associate the book with the user
             )
     elif f.name.endswith('.xlsx'):
         # Read Excel file (.xlsx)
         wb = load_workbook(f)
         sheet = wb.active
         for row in sheet.iter_rows(min_row=2, values_only=True):  # Skips the header row
-            # Replace with your model's actual fields
-            # MyModel.objects.create(
-            #     field1=row[0],
-            #     field2=row[1],
-            #     # Add other fields as needed
-            # )
             Book.objects.create(
                 uid=row[0],
                 title=row[1],
@@ -264,12 +234,12 @@ def handle_uploaded_file(f):
                 published_date=row[5],
                 category=row[6],
                 distribution_expense=row[7],
-
-                # Add other fields as needed
+                user=user,  # Associate the book with the user
             )
     else:
         raise ValueError('Invalid file format')
 
+@login_required(login_url='login/')
 def upload_file(request):
     """
     Uploads a file
@@ -277,12 +247,13 @@ def upload_file(request):
     if request.method == 'POST' and request.FILES.get('file'):
         try:
             # Process the uploaded file
-            handle_uploaded_file(request.FILES['file'])
+            handle_uploaded_file(request.FILES['file'], request.user)  # Pass the user
             
-            # Associate the file with the user
-            file_instance = UploadedFile.objects.create(file=request.FILES['file'], user=request.user)
-            
-            return HttpResponse('File uploaded and data saved successfully.')
+            # Save the uploaded file instance
+            UploadedFile.objects.create(file=request.FILES['file'], user=request.user)
+            messages.success(request, "File uploaded and data saved successfully")
+            return redirect('books')
+            # return HttpResponse('File uploaded and data saved successfully.')
         except Exception as e:
             return HttpResponse(f'An error occurred: {str(e)}')
     else:

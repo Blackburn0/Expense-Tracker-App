@@ -17,7 +17,7 @@ urlpatterns = [
     path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(), name="password-reset-done"),
     path('password-reset/', auth_views.PasswordResetView.as_view(), name="password-reset"),
 
-    path('books/', get_all_book, name="books"),
+    path('books/', get_users_book, name="books"),
     path('book/detail/<int:pk>/', book_details, name="book-detail"),
     path('book/add/', add_book, name="add-book"),
     path('book/update/<int:pk>/', update_book, name="update-book"),
